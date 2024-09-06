@@ -98,6 +98,11 @@
             color: #888;  /* 灰色 */
             font-style: italic;  /* 可选: 使省略号斜体 */
         }
+        
+        #excelContent td,
+        #resultTableBody td {
+            title: none;
+        }
     </style>
 </head>
 <body>
@@ -140,19 +145,26 @@
             </div>
             <div class="col-md-7" id="resultArea">
                 <h4>AI响应结果</h4>
-                <table class="table table-striped" id="resultTable">
-                    <thead>
-                        <tr>
-                            <th>提示词（任务）</th>
-                            <th>执行状态</th>
-                            <th>时间戳</th>
-                            <th>AI答复结果</th>
-                            <th>Token数量</th>
-                        </tr>
-                    </thead>
-                    <tbody id="resultTableBody">
-                    </tbody>
-                </table>
+                <div class="row mt-4">
+                    <div class="col">
+                        <h3>AI响应结果 <button id="exportButton" class="btn btn-sm btn-primary float-end">导出结果</button></h3>
+                        <div class="table-responsive">
+                            <table class="table table-striped" id="resultTable">
+                                <thead>
+                                    <tr>
+                                        <th>提示词（任务）</th>
+                                        <th>执行状态</th>
+                                        <th>时间戳</th>
+                                        <th>AI答复结果</th>
+                                        <th>Token数量</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="resultTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

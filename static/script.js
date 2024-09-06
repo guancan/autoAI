@@ -45,7 +45,7 @@ function updateModelInfo() {
     const modelSelect = document.getElementById('modelSelect');
     selectedModel = modelSelect.value;
     const modelInfo = document.getElementById('modelInfo');
-    // 不需要重新获���模型列表,直接使用已经获取的数据
+    // 不需要重新获模型列表,直接使用已经获取的数据
     const currentModelInfo = models.find(m => m.name === selectedModel);
     if (currentModelInfo) {
         modelInfo.innerHTML = `输入价格: ¥${currentModelInfo.input_price}/1k tokens<br>输出价格: ¥${currentModelInfo.output_price}/1k tokens`;
@@ -126,6 +126,7 @@ function processNextPrompt(prompts) {
             updateResultStatus(prompt, 'completed', data.response, tokenCount);
             addLog(`处理完成: 提示词 "${prompt}", Token数: ${tokenCount}`);
             addCellHoverListeners(); // 添加这行
+            addCellClickListeners(); // 添加这行
         } else {
             updateResultStatus(prompt, 'error', data.error, '-');
             addLog('处理提示词时出错: ' + data.error, 'error');
@@ -264,6 +265,9 @@ function displayExcelContent(columns, data) {
     
     // 添加鼠标悬停事件监听器
     addCellHoverListeners();
+    
+    // 添加单元格点击事件监听器
+    addCellClickListeners();
 }
 
 // 辅助函数：转义HTML特殊字符
@@ -322,11 +326,18 @@ function addCellHoverListeners() {
             tooltip.style.display = 'block';
             
             adjustTooltipPosition(e, tooltip);
+            
+            // 阻止默认的 tooltip 行为
+            e.preventDefault();
+            e.stopPropagation();
         });
         
         cell.addEventListener('mouseleave', function() {
             tooltip.style.display = 'none';
         });
+        
+        // 移除 title 属性（如果存在）
+        cell.removeAttribute('title');
     }
 
     excelCells.forEach(addHoverToCell);
@@ -381,4 +392,77 @@ function adjustTooltipPosition(event, tooltip) {
     // 设置最终位置
     tooltip.style.left = `${left}px`;
     tooltip.style.top = `${top}px`;
+}
+
+function addCellClickListeners() {
+    const resultCells = document.querySelectorAll('#resultTableBody td');
+    
+    resultCells.forEach(cell => {
+        cell.addEventListener('click', function() {
+            const text = this.getAttribute('data-full-text') || this.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                showCopyNotification(this);
+            });
+        });
+    });
+}
+
+function showCopyNotification(element) {
+    const notification = document.createElement('div');
+    notification.textContent = '已复制单元格内容';
+    notification.style.position = 'absolute';
+    notification.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+    notification.style.color = 'white';
+    notification.style.padding = '5px 10px';
+    notification.style.borderRadius = '3px';
+    notification.style.zIndex = '1000';
+
+    const rect = element.getBoundingClientRect();
+    notification.style.left = `${rect.left}px`;
+    notification.style.top = `${rect.bottom + 5}px`;
+
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        document.body.removeChild(notification);
+    }, 2000);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // 现有的代码...
+
+    const exportButton = document.getElementById('exportButton');
+    exportButton.addEventListener('click', exportResults);
+});
+
+function exportResults() {
+    const table = document.getElementById('resultTable');
+    let csv = [];
+    const rows = table.querySelectorAll('tr');
+    
+    for (let i = 0; i < rows.length; i++) {
+        let row = [], cols = rows[i].querySelectorAll('td, th');
+        
+        for (let j = 0; j < cols.length; j++) {
+            let text = cols[j].getAttribute('data-full-text') || cols[j].innerText;
+            // 替换双引号为两个双引号（CSV格式要求）
+            text = text.replace(/"/g, '""');
+            // 将单元格内容用双引号括起来
+            row.push('"' + text + '"');
+        }
+        csv.push(row.join(','));
+    }
+    
+    const csvContent = csv.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", "ai_results.csv");
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
 }

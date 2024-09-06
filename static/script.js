@@ -45,7 +45,7 @@ function updateModelInfo() {
     const modelSelect = document.getElementById('modelSelect');
     selectedModel = modelSelect.value;
     const modelInfo = document.getElementById('modelInfo');
-    // 不需要重新获取模型列表,直接使用已经获取的数据
+    // 不需要重新获���模型列表,直接使用已经获取的数据
     const currentModelInfo = models.find(m => m.name === selectedModel);
     if (currentModelInfo) {
         modelInfo.innerHTML = `输入价格: ¥${currentModelInfo.input_price}/1k tokens<br>输出价格: ¥${currentModelInfo.output_price}/1k tokens`;
@@ -139,32 +139,37 @@ function processNextPrompt(prompts) {
     });
 }
 
-function addResultRow(prompt, status, timestamp, result, tokenCount) {
-    const resultTableBody = document.getElementById('resultTableBody');
-    const newRow = resultTableBody.insertRow();
-    newRow.innerHTML = `
-        <td data-full-text="${escapeHtml(prompt)}">${escapeHtml(prompt)}</td>
-        <td class="task-status-${status}">${getStatusText(status)}</td>
-        <td>${timestamp}</td>
-        <td data-full-text="${escapeHtml(result)}">${escapeHtml(result)}</td>
-        <td>${tokenCount}</td>
-    `;
+function truncateText(text, limit = 100) {
+    if (text.length <= limit) return text;
+    return text.substring(0, limit) + '<span class="ellipsis">...</span>';
 }
 
 function updateResultStatus(prompt, status, result, tokenCount) {
     const resultTableBody = document.getElementById('resultTableBody');
-    const existingRow = Array.from(resultTableBody.rows).find(row => row.cells[0].textContent === prompt);
+    const existingRow = Array.from(resultTableBody.rows).find(row => row.cells[0].getAttribute('data-full-text') === prompt);
     
     if (existingRow) {
         existingRow.cells[1].textContent = getStatusText(status);
         existingRow.cells[1].className = `task-status-${status}`;
         existingRow.cells[2].textContent = new Date().toLocaleString();
-        existingRow.cells[3].textContent = result;
+        existingRow.cells[3].innerHTML = truncateText(escapeHtml(result));
         existingRow.cells[3].setAttribute('data-full-text', result);
         existingRow.cells[4].textContent = tokenCount;
     } else {
         addResultRow(prompt, status, new Date().toLocaleString(), result, tokenCount);
     }
+}
+
+function addResultRow(prompt, status, timestamp, result, tokenCount) {
+    const resultTableBody = document.getElementById('resultTableBody');
+    const newRow = resultTableBody.insertRow();
+    newRow.innerHTML = `
+        <td data-full-text="${escapeHtml(prompt)}">${truncateText(escapeHtml(prompt))}</td>
+        <td class="task-status-${status}">${getStatusText(status)}</td>
+        <td>${timestamp}</td>
+        <td data-full-text="${escapeHtml(result)}">${truncateText(escapeHtml(result))}</td>
+        <td>${tokenCount}</td>
+    `;
 }
 
 function getStatusText(status) {
@@ -190,6 +195,11 @@ style.textContent = `
     .selected-cell {
         background-color: #007bff !important;
         color: white;
+    }
+    
+    .ellipsis {
+        color: #888;  /* 灰色 */
+        font-style: italic;  /* 可选: 使省略号斜体 */
     }
 `;
 document.head.appendChild(style);
@@ -238,10 +248,7 @@ function displayExcelContent(columns, data) {
         tableHTML += '<tr>';
         row.forEach(cell => {
             const cellContent = cell ? cell.toString() : '';
-            const truncatedContent = cellContent.length > 100 
-                ? cellContent.substring(0, 100) + '...' 
-                : cellContent;
-            tableHTML += `<td data-full-text="${escapeHtml(cellContent)}">${escapeHtml(truncatedContent)}</td>`;
+            tableHTML += `<td data-full-text="${escapeHtml(cellContent)}">${truncateText(escapeHtml(cellContent))}</td>`;
         });
         tableHTML += '</tr>';
     });

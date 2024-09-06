@@ -95,7 +95,7 @@ function generatePromptCombinations() {
 
 function processPrompts(prompts) {
     prompts.forEach((prompt, index) => {
-        addResultRow(prompt, 'pending', new Date().toLocaleString(), '等待处理', '-', '-');
+        addResultRow(prompt, 'pending', new Date().toLocaleString(), '等待处理', '-');
     });
 
     processNextPrompt(prompts);
@@ -109,7 +109,7 @@ function processNextPrompt(prompts) {
     
     const prompt = prompts.shift();
     addLog('正在处理提示词: ' + prompt);
-    updateResultStatus(prompt, 'pending', '处理中...', '-', '-');
+    updateResultStatus(prompt, 'pending', '处理中...', '-');
     
     fetch('/process', {
         method: 'POST',
@@ -122,23 +122,22 @@ function processNextPrompt(prompts) {
     .then(data => {
         if (data.success) {
             const tokenCount = data.token_count;
-            const estimatedPrice = calculateEstimatedPrice(tokenCount);
-            updateResultStatus(prompt, 'completed', data.response, tokenCount, estimatedPrice);
-            addLog(`处理完成: 提示词 "${prompt}", Token数: ${tokenCount}, 估算价格: ¥${estimatedPrice}`);
+            updateResultStatus(prompt, 'completed', data.response, tokenCount);
+            addLog(`处理完成: 提示词 "${prompt}", Token数: ${tokenCount}`);
         } else {
-            updateResultStatus(prompt, 'error', data.error, '-', '-');
+            updateResultStatus(prompt, 'error', data.error, '-');
             addLog('处理提示词时出错: ' + data.error, 'error');
         }
         processNextPrompt(prompts);
     })
     .catch(error => {
-        updateResultStatus(prompt, 'error', error.toString(), '-', '-');
+        updateResultStatus(prompt, 'error', error.toString(), '-');
         addLog('处理示词时出错: ' + error, 'error');
         processNextPrompt(prompts);
     });
 }
 
-function addResultRow(prompt, status, timestamp, result, tokenCount, estimatedPrice) {
+function addResultRow(prompt, status, timestamp, result, tokenCount) {
     const resultTableBody = document.getElementById('resultTableBody');
     const row = resultTableBody.insertRow();
     row.innerHTML = `
@@ -147,12 +146,11 @@ function addResultRow(prompt, status, timestamp, result, tokenCount, estimatedPr
         <td>${timestamp}</td>
         <td>${result}</td>
         <td>${tokenCount}</td>
-        <td>${estimatedPrice}</td>
     `;
     row.id = `result-row-${prompt}`;
 }
 
-function updateResultStatus(prompt, status, result, tokenCount, estimatedPrice) {
+function updateResultStatus(prompt, status, result, tokenCount) {
     const row = document.getElementById(`result-row-${prompt}`);
     if (row) {
         row.cells[1].className = `task-status-${status}`;
@@ -160,15 +158,7 @@ function updateResultStatus(prompt, status, result, tokenCount, estimatedPrice) 
         row.cells[2].textContent = new Date().toLocaleString();
         row.cells[3].textContent = result;
         row.cells[4].textContent = tokenCount;
-        row.cells[5].textContent = estimatedPrice;
     }
-}
-
-function calculateEstimatedPrice(tokenCount) {
-    if (!currentModelInfo || tokenCount === '-') return '-';
-    const inputPrice = currentModelInfo.input_price * (tokenCount / 1000);
-    const outputPrice = currentModelInfo.output_price * (tokenCount / 1000);
-    return (inputPrice + outputPrice).toFixed(4);
 }
 
 function getStatusText(status) {
@@ -241,7 +231,11 @@ function displayExcelContent(columns, data) {
     data.forEach(row => {
         tableHTML += '<tr>';
         row.forEach(cell => {
-            tableHTML += `<td>${cell}</td>`;
+            const cellContent = cell ? cell.toString() : '';
+            const truncatedContent = cellContent.length > 100 
+                ? cellContent.substring(0, 100) + '...' 
+                : cellContent;
+            tableHTML += `<td data-full-text="${escapeHtml(cellContent)}">${escapeHtml(truncatedContent)}</td>`;
         });
         tableHTML += '</tr>';
     });
@@ -254,6 +248,16 @@ function displayExcelContent(columns, data) {
     
     // 添加单元格选择功能
     addCellSelectionListeners();
+}
+
+// 辅助函数：转义HTML特殊字符
+function escapeHtml(unsafe) {
+    return unsafe
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;");
 }
 
 function addCellSelectionListeners() {

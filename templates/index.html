@@ -48,6 +48,37 @@
             align-items: center;
             height: 38px; /* 与表单控件的默认高度一致 */
         }
+        
+        /* 现有的样式保持不变 */
+        
+        /* 新增样式 */
+        #excelContent td {
+            max-width: 200px; /* 根据需要调整 */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            position: relative;
+            white-space: normal; /* 改为normal允许文本换行 */
+            word-wrap: break-word; /* 允许长单词换行 */
+            max-height: 100px; /* 设置最大高度,可以根据需要调整 */
+            padding: 5px; /* 添加一些内边距 */
+        }
+        
+        #excelContent td:hover::after {
+            content: attr(data-full-text);
+            position: absolute;
+            left: 0;
+            top: 100%;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            padding: 5px;
+            z-index: 1000;
+            white-space: normal;
+            word-wrap: break-word;
+            max-width: 300px; /* 根据需要调整 */
+            max-height: 200px; /* 设置最大高度 */
+            overflow-y: auto; /* 如果内容过多,添加滚动条 */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
     </style>
 </head>
 <body>
@@ -81,7 +112,7 @@
                     <div id="columnSelectionCount"></div>
                     <div id="totalTaskCount"></div>
                 </div>
-                <button id="submitBtn" class="btn btn-success mt-3" style="display:none;">提交到AI</button>
+                <button id="submitBtn" class="btn btn-success mt-3" style="display:none;">提交AI</button>
 
                 <div id="logArea" class="mt-4">
                     <h4>执行日志</h4>
@@ -98,7 +129,6 @@
                             <th>时间戳</th>
                             <th>AI答复结果</th>
                             <th>Token数量</th>
-                            <th>估算价格</th>
                         </tr>
                     </thead>
                     <tbody id="resultTableBody">

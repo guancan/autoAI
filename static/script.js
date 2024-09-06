@@ -63,6 +63,11 @@ function generatePromptCombinations() {
     const table = document.querySelector('#excelContent table');
     const selectedCells = table.querySelectorAll('.selected-cell');
     const columnSelections = {};
+    const isNewlineMode = document.getElementById('newlineSwitch').checked;
+    const insertHeader = document.getElementById('insertHeaderSwitch').checked;
+
+    // 获取表头
+    const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent.trim());
 
     // 按列分组选中的单元格
     selectedCells.forEach(cell => {
@@ -70,8 +75,11 @@ function generatePromptCombinations() {
         if (!columnSelections[columnIndex]) {
             columnSelections[columnIndex] = [];
         }
-        // 使用 data-full-text 属性获取完整内容
-        columnSelections[columnIndex].push(cell.getAttribute('data-full-text') || cell.textContent.trim());
+        let cellContent = cell.getAttribute('data-full-text') || cell.textContent.trim();
+        if (insertHeader) {
+            cellContent = `${headers[columnIndex]}: ${cellContent}`;
+        }
+        columnSelections[columnIndex].push(cellContent);
     });
 
     // 生成所有可能的组合
@@ -91,7 +99,9 @@ function generatePromptCombinations() {
     }, []);
 
     // 将每个组合转换为提示词字符串
-    return combinations.map(combination => combination.join(' '));
+    return combinations.map(combination => 
+        combination.join(isNewlineMode ? '\n' : ' ')
+    );
 }
 
 function processPrompts(prompts) {
@@ -291,27 +301,31 @@ function addCellSelectionListeners() {
 }
 
 function updateSelectionInfo() {
-    const table = document.querySelector('#excelContent table');
-    const selectedCells = table.querySelectorAll('.selected-cell');
+    const selectedCells = document.querySelectorAll('.selected-cell');
+    const columnSelections = new Set(Array.from(selectedCells).map(cell => cell.cellIndex));
+    const totalTasks = calculateTotalTasks(selectedCells);
+
     const columnSelectionCount = document.getElementById('columnSelectionCount');
     const totalTaskCount = document.getElementById('totalTaskCount');
-    
-    const columnSelections = {};
+    const modeInfo = document.getElementById('modeInfo');
+    const newlineSwitch = document.getElementById('newlineSwitch');
+    const insertHeaderSwitch = document.getElementById('insertHeaderSwitch');
 
-    // 按列分组选中的单元格
+    columnSelectionCount.textContent = `选中列数: ${columnSelections.size}`;
+    totalTaskCount.textContent = `总任务数: ${totalTasks}`;
+
+    let modeText = newlineSwitch.checked ? '换行' : '空格';
+    modeText += insertHeaderSwitch.checked ? '，包含标题' : '';
+    modeInfo.textContent = `拼接模式: ${modeText}`;
+}
+
+function calculateTotalTasks(selectedCells) {
+    const columnCounts = {};
     selectedCells.forEach(cell => {
         const columnIndex = cell.cellIndex;
-        if (!columnSelections[columnIndex]) {
-            columnSelections[columnIndex] = [];
-        }
-        columnSelections[columnIndex].push(cell.textContent.trim());
+        columnCounts[columnIndex] = (columnCounts[columnIndex] || 0) + 1;
     });
-
-    const selectedColumns = Object.keys(columnSelections).length;
-    const totalTasks = Object.values(columnSelections).reduce((acc, curr) => acc * curr.length, 1);
-
-    columnSelectionCount.textContent = `选中列数: ${selectedColumns}`;
-    totalTaskCount.textContent = `总任务数: ${totalTasks}`;
+    return Object.values(columnCounts).reduce((a, b) => a * b, 1);
 }
 
 function addCellHoverListeners() {

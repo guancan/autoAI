@@ -70,7 +70,8 @@ function generatePromptCombinations() {
         if (!columnSelections[columnIndex]) {
             columnSelections[columnIndex] = [];
         }
-        columnSelections[columnIndex].push(cell.textContent.trim());
+        // 使用 data-full-text 属性获取完整内容
+        columnSelections[columnIndex].push(cell.getAttribute('data-full-text') || cell.textContent.trim());
     });
 
     // 生成所有可能的组合
@@ -124,6 +125,7 @@ function processNextPrompt(prompts) {
             const tokenCount = data.token_count;
             updateResultStatus(prompt, 'completed', data.response, tokenCount);
             addLog(`处理完成: 提示词 "${prompt}", Token数: ${tokenCount}`);
+            addCellHoverListeners(); // 添加这行
         } else {
             updateResultStatus(prompt, 'error', data.error, '-');
             addLog('处理提示词时出错: ' + data.error, 'error');
@@ -139,25 +141,29 @@ function processNextPrompt(prompts) {
 
 function addResultRow(prompt, status, timestamp, result, tokenCount) {
     const resultTableBody = document.getElementById('resultTableBody');
-    const row = resultTableBody.insertRow();
-    row.innerHTML = `
-        <td>${prompt}</td>
+    const newRow = resultTableBody.insertRow();
+    newRow.innerHTML = `
+        <td data-full-text="${escapeHtml(prompt)}">${escapeHtml(prompt)}</td>
         <td class="task-status-${status}">${getStatusText(status)}</td>
         <td>${timestamp}</td>
-        <td>${result}</td>
+        <td data-full-text="${escapeHtml(result)}">${escapeHtml(result)}</td>
         <td>${tokenCount}</td>
     `;
-    row.id = `result-row-${prompt}`;
 }
 
 function updateResultStatus(prompt, status, result, tokenCount) {
-    const row = document.getElementById(`result-row-${prompt}`);
-    if (row) {
-        row.cells[1].className = `task-status-${status}`;
-        row.cells[1].textContent = getStatusText(status);
-        row.cells[2].textContent = new Date().toLocaleString();
-        row.cells[3].textContent = result;
-        row.cells[4].textContent = tokenCount;
+    const resultTableBody = document.getElementById('resultTableBody');
+    const existingRow = Array.from(resultTableBody.rows).find(row => row.cells[0].textContent === prompt);
+    
+    if (existingRow) {
+        existingRow.cells[1].textContent = getStatusText(status);
+        existingRow.cells[1].className = `task-status-${status}`;
+        existingRow.cells[2].textContent = new Date().toLocaleString();
+        existingRow.cells[3].textContent = result;
+        existingRow.cells[3].setAttribute('data-full-text', result);
+        existingRow.cells[4].textContent = tokenCount;
+    } else {
+        addResultRow(prompt, status, new Date().toLocaleString(), result, tokenCount);
     }
 }
 
@@ -248,6 +254,9 @@ function displayExcelContent(columns, data) {
     
     // 添加单元格选择功能
     addCellSelectionListeners();
+    
+    // 添加鼠标悬停事件监听器
+    addCellHoverListeners();
 }
 
 // 辅助函数：转义HTML特殊字符
@@ -292,4 +301,77 @@ function updateSelectionInfo() {
 
     columnSelectionCount.textContent = `选中列数: ${selectedColumns}`;
     totalTaskCount.textContent = `总任务数: ${totalTasks}`;
+}
+
+function addCellHoverListeners() {
+    const excelCells = document.querySelectorAll('#excelContent td');
+    const resultCells = document.querySelectorAll('#resultTableBody td');
+    const tooltip = document.getElementById('cellContentTooltip');
+    
+    function addHoverToCell(cell) {
+        cell.addEventListener('mouseenter', function(e) {
+            const fullText = this.getAttribute('data-full-text') || this.textContent;
+            tooltip.innerHTML = `<pre style="white-space: pre-wrap; word-wrap: break-word;">${escapeHtml(fullText)}</pre>`;
+            tooltip.style.display = 'block';
+            
+            adjustTooltipPosition(e, tooltip);
+        });
+        
+        cell.addEventListener('mouseleave', function() {
+            tooltip.style.display = 'none';
+        });
+    }
+
+    excelCells.forEach(addHoverToCell);
+    resultCells.forEach(addHoverToCell);
+
+    // 添加窗口resize事件监听器
+    window.addEventListener('resize', () => {
+        if (tooltip.style.display === 'block') {
+            adjustTooltipPosition(null, tooltip);
+        }
+    });
+}
+
+function adjustTooltipPosition(event, tooltip) {
+    const padding = 20; // 距离窗口边缘的padding
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+
+    // 重置tooltip大小
+    tooltip.style.width = '';
+    tooltip.style.height = '';
+
+    // 获取tooltip的实际大小
+    const tooltipRect = tooltip.getBoundingClientRect();
+    let tooltipWidth = Math.min(tooltipRect.width, windowWidth * 0.8);
+    let tooltipHeight = Math.min(tooltipRect.height, windowHeight * 0.8);
+
+    // 调整tooltip大小
+    tooltip.style.width = `${tooltipWidth}px`;
+    tooltip.style.height = `${tooltipHeight}px`;
+
+    // 计算位置
+    let left, top;
+    if (event) {
+        left = event.clientX + padding;
+        top = event.clientY + padding;
+    } else {
+        // 如果没有事件对象(例如窗口调整大小时),保持当前位置
+        const currentRect = tooltip.getBoundingClientRect();
+        left = currentRect.left;
+        top = currentRect.top;
+    }
+
+    // 确保tooltip不会超出窗口边界
+    if (left + tooltipWidth > windowWidth - padding) {
+        left = windowWidth - tooltipWidth - padding;
+    }
+    if (top + tooltipHeight > windowHeight - padding) {
+        top = windowHeight - tooltipHeight - padding;
+    }
+
+    // 设置最终位置
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
 }

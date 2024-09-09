@@ -48,6 +48,61 @@
             align-items: center;
             height: 38px; /* 与表单控件的默认高度一致 */
         }
+        
+        /* 现有的样式保持不变 */
+        
+        /* 新增样式 */
+        #excelContent td {
+            max-width: 200px; /* 根据需要调整 */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            position: relative;
+            white-space: normal; /* 改为normal允许文本换行 */
+            word-wrap: break-word; /* 允许长词换 */
+            max-height: 100px; /* 设置最大高度,可以根据需要调整 */
+            padding: 5px; /* 添加一些内边距 */
+        }
+        
+        #excelContent td:hover::after {
+            content: attr(data-full-text);
+            position: absolute;
+            left: 0;
+            top: 100%;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            padding: 5px;
+            z-index: 1000;
+            white-space: normal;
+            word-wrap: break-word;
+            max-width: 300px; /* 根据需调整 */
+            max-height: 200px; /* 设置最大高 */
+            overflow-y: auto; /* 如果内容过多,添加滚动条 */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        #cellContentTooltip {
+            font-size: 14px;
+            line-height: 1.5;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        #cellContentTooltip pre {
+            margin: 0;
+            font-family: inherit;
+        }
+        
+        /* 其他现有样式保持不变 */
+        
+        .ellipsis {
+            color: #888;  /* 灰色 */
+            font-style: italic;  /* 可选: 使省略号斜体 */
+        }
+        
+        #excelContent td,
+        #resultTableBody td {
+            title: none;
+        }
     </style>
 </head>
 <body>
@@ -76,12 +131,31 @@
                 </form>
 
                 <div id="excelContent" class="mt-4"></div>
-                <div id="selectionInfo" class="mt-3">
-                    <h4>选中信息</h4>
-                    <div id="columnSelectionCount"></div>
-                    <div id="totalTaskCount"></div>
+                <div id="selectionInfo" class="mt-3 card">
+                    <div class="card-header">
+                        <h4 class="mb-0">选中信息</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p id="columnSelectionCount" class="mb-2"></p>
+                                <p id="totalTaskCount" class="mb-2"></p>
+                                <p id="modeInfo" class="mb-2"></p>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" id="newlineSwitch" checked>
+                                    <label class="form-check-label" for="newlineSwitch">换行拼接模式</label>
+                                </div>
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" id="insertHeaderSwitch">
+                                    <label class="form-check-label" for="insertHeaderSwitch">插入单元格标题</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <button id="submitBtn" class="btn btn-success mt-3" style="display:none;">提交到AI</button>
+                <button id="submitBtn" class="btn btn-primary mt-3">提交AI</button>
 
                 <div id="logArea" class="mt-4">
                     <h4>执行日志</h4>
@@ -90,24 +164,32 @@
             </div>
             <div class="col-md-7" id="resultArea">
                 <h4>AI响应结果</h4>
-                <table class="table table-striped" id="resultTable">
-                    <thead>
-                        <tr>
-                            <th>提示词（任务）</th>
-                            <th>执行状态</th>
-                            <th>时间戳</th>
-                            <th>AI答复结果</th>
-                            <th>Token数量</th>
-                            <th>估算价格</th>
-                        </tr>
-                    </thead>
-                    <tbody id="resultTableBody">
-                    </tbody>
-                </table>
+                <div class="row mt-4">
+                    <div class="col">
+                        <h3>AI响应结果 <button id="exportButton" class="btn btn-sm btn-primary float-end">导出结果</button></h3>
+                        <div class="table-responsive">
+                            <table class="table table-striped" id="resultTable">
+                                <thead>
+                                    <tr>
+                                        <th>提示词（任务）</th>
+                                        <th>执行状态</th>
+                                        <th>时间戳</th>
+                                        <th>AI答复结果</th>
+                                        <th>Token数量</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="resultTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <!-- 在body标签结束前添加以下代码 -->
+    <div id="cellContentTooltip" style="display: none; position: fixed; background: white; border: 1px solid #ddd; padding: 10px; max-width: 80%; max-height: 80%; overflow: auto; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.2);"></div>
 </body>
 </html>

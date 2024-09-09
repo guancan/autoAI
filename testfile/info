@@ -1,0 +1,15 @@
+# 启动项目
+cd Users/guancan/Documents/GitHub/autoAI
+source venv/bin/activate
+
+# 运行项目
+python3 run_dev.py
+python3 app.py
+
+# 访问项目
+http://127.0.0.1:5000
+
+#保存当前工程
+git add .
+git commit -m "update 信息"
+git push
